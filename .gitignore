@@ -1,0 +1,7 @@
+# Dependências
+node_modules/
+.vercel/
+# Variáveis
+.env
+.env.*
+.vercel

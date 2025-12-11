@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Flashcards SRS (API + Mongo)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-soft: #020617;
+      --card: #0b1120;
+      --card-soft: #020617;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.15);
+      --accent-strong: #0ea5e9;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --danger: #f97373;
+      --ok: #4ade80;
+      --warn: #fbbf24;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.55);
+      --shadow-small: 0 8px 20px rgba(0, 0, 0, 0.45);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro",
+        "Inter", sans-serif;
+      background: radial-gradient(circle at top, #1f2937 0, #020617 52%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 1120px;
+      background: radial-gradient(circle at top left, #020617, #020617 60%);
+      border-radius: 24px;
+      box-shadow: var(--shadow-soft);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header.app-header {
+      padding: 18px 22px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: radial-gradient(circle at top left, #020617, #020617 60%);
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand-logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 20%, #38bdf8, #0ea5e9 40%, #0369a1);
+      box-shadow: 0 0 22px rgba(56, 189, 248, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+      color: #e0f2fe;
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      font-size: 17px;
+      white-space: nowrap;
+    }
+
+    .brand-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .brand-text {
+      min-width: 0;
+    }
+
+    .brand-text > div {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .header-right {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .pill {
+      border-radius: 999px;
+      padding: 4px 10px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: rgba(15, 23, 42, 0.9);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pill span.text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    main.app-main {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      min-height: 480px;
+      max-height: calc(100vh - 120px);
+      overflow: hidden;
+    }
+
+    aside.sidebar {
+      border-right: 1px solid rgba(148, 163, 184, 0.3);
+      background: radial-gradient(circle at top, #020617, #020617 60%);
+      padding: 16px 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .sidebar-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .deck-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow-y: auto;
+      padding-right: 2px;
+      max-height: 220px;
+    }
+
+    .deck-item {
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: linear-gradient(135deg, #020617, #020617);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: 0.16s ease;
+    }
+
+    .deck-item span.name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .deck-item span.count {
+      font-size: 11px;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .deck-item.active {
+      border-color: var(--accent);
+      background: radial-gradient(circle at top left, #0b1120, #020617 65%);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+    }
+
+    .deck-item:hover {
+      transform: translateY(-1px);
+      border-color: rgba(148, 163, 184, 0.7);
+    }
+
+    .sidebar-actions {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--text);
+      padding: 7px 12px;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: 0.14s ease;
+      font-weight: 500;
+    }
+
+    .btn-primary {
+      border-color: var(--accent-strong);
+      background: radial-gradient(circle at top, #0ea5e9, #0369a1);
+      color: #e0f2fe;
+      box-shadow: 0 10px 25px rgba(8, 47, 73, 0.75);
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+      box-shadow: 0 14px 32px rgba(8, 47, 73, 0.9);
+    }
+
+    .btn-ghost {
+      background: transparent;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(148, 163, 184, 0.9);
+    }
+
+    .btn-sm {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      font-size: 11px;
+      color: var(--muted);
+      opacity: 0.85;
+    }
+
+    section.main-panel {
+      padding: 16px 18px 20px;
+      display: flex;
+      flex-direction: column;
+      background: radial-gradient(
+        circle at top left,
+        rgba(56, 189, 248, 0.06),
+        #020617 55%
+      );
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .panel-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .panel-title {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .panel-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tab-bar {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 3px;
+      background: rgba(15, 23, 42, 0.86);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      box-shadow: var(--shadow-small);
+      gap: 3px;
+      flex-shrink: 0;
+    }
+
+    .tab-btn {
+      border-radius: 999px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 11px;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: 0.16s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+
+    .tab-btn.active {
+      background: radial-gradient(
+        circle at top,
+        rgba(56, 189, 248, 0.32),
+        rgba(8, 47, 73, 0.9)
+      );
+      color: #e0f2fe;
+      box-shadow: 0 8px 20px rgba(8, 47, 73, 0.8);
+    }
+
+    .tab-btn span.dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--accent-strong);
+    }
+
+    .content {
+      flex: 1;
+      border-radius: 18px;
+      background: radial-gradient(
+        circle at top left,
+        rgba(15, 23, 42, 0.96),
+        rgba(15, 23, 42, 0.98)
+      );
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      padding: 14px 14px 16px;
+      display: flex;
+      flex-direction: row;
+      gap: 14px;
+      overflow: hidden;
+    }
+
+    .content-main {
+      flex: 2;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .content-side {
+      width: 240px;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: radial-gradient(circle at top, #020617 0, #020617 60%);
+      padding: 10px 10px 12px;
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .side-title {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .metric-card {
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      padding: 7px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .metric-label {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .metric-value {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .metric-chip {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .metric-chip.ok {
+      border-color: rgba(74, 222, 128, 0.8);
+      color: #bbf7d0;
+    }
+
+    .metric-chip.warn {
+      border-color: rgba(250, 204, 21, 0.8);
+      color: #fef3c7;
+    }
+
+    .metric-chip.danger {
+      border-color: rgba(248, 113, 113, 0.9);
+      color: #fee2e2;
+    }
+
+    .section-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+
+    .section-helper {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .card-list {
+      margin-top: 6px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: rgba(15, 23, 42, 0.95);
+      padding: 8px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .card-item {
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: radial-gradient(circle at top, #020617, #020617 70%);
+      padding: 8px 9px;
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) auto;
+      gap: 8px;
+      align-items: start;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .card-item-front {
+      font-weight: 500;
+      word-wrap: break-word;
+    }
+
+    .card-item-back {
+      color: var(--muted);
+      word-wrap: break-word;
+    }
+
+    .card-item-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: flex-end;
+    }
+
+    .badge {
+      font-size: 10px;
+      padding: 2px 5px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      color: var(--muted);
+    }
+
+    .badge-new {
+      border-color: rgba(56, 189, 248, 0.8);
+      color: #bae6fd;
+    }
+
+    .inline-inputs {
+      display: grid;
+      grid-template-columns: 1.4fr 1.4fr auto;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    input[type="text"],
+    textarea {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--text);
+      font-size: 12px;
+      padding: 7px 8px;
+      resize: vertical;
+      min-height: 0;
+      font-family: inherit;
+    }
+
+    textarea {
+      min-height: 40px;
+      max-height: 100px;
+    }
+
+    input:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent-strong);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.55);
+    }
+
+    .study-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 0;
+    }
+
+    .study-card {
+      width: min(480px, 100%);
+      border-radius: 18px;
+      background: radial-gradient(circle at top, #020617, #020617 60%);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      box-shadow: 0 26px 60px rgba(15, 23, 42, 0.95);
+      padding: 20px 18px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .study-card-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .study-card-content {
+      font-size: 17px;
+      font-weight: 500;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      margin-bottom: 10px;
+    }
+
+    .study-card-sub {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .study-footer {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .study-actions-primary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .btn-diff {
+      min-width: 90px;
+    }
+
+    .btn-diff.diff {
+      border-color: rgba(248, 113, 113, 0.9);
+      color: #fecaca;
+      background: radial-gradient(
+        circle at top,
+        rgba(127, 29, 29, 0.9),
+        rgba(15, 23, 42, 0.98)
+      );
+    }
+
+    .btn-diff.good {
+      border-color: rgba(250, 204, 21, 0.9);
+      color: #fef3c7;
+      background: radial-gradient(
+        circle at top,
+        rgba(120, 53, 15, 0.9),
+        rgba(15, 23, 42, 0.98)
+      );
+    }
+
+    .btn-diff.easy {
+      border-color: rgba(74, 222, 128, 0.95);
+      color: #bbf7d0;
+      background: radial-gradient(
+        circle at top,
+        rgba(22, 101, 52, 0.9),
+        rgba(15, 23, 42, 0.98)
+      );
+    }
+
+    .study-meta {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 22px 10px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* -------------------------
+       RESPONSIVIDADE
+       ------------------------- */
+    @media (max-width: 900px) {
+      body {
+        padding: 12px;
+      }
+      .app-shell {
+        border-radius: 18px;
+      }
+      main.app-main {
+        grid-template-columns: minmax(0, 1fr);
+        max-height: none;
+      }
+      aside.sidebar {
+        border-right: none;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+        padding-bottom: 12px;
+      }
+      .deck-list {
+        max-height: 140px;
+      }
+      .content {
+        flex-direction: column;
+      }
+      .content-side {
+        width: 100%;
+        order: -1;
+      }
+      .study-card {
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.9);
+      }
+    }
+
+    @media (max-width: 600px) {
+      header.app-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .panel-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .panel-title,
+      .panel-subtitle {
+        white-space: normal;
+      }
+      .tab-bar {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .inline-inputs {
+        grid-template-columns: 1fr;
+      }
+      .card-item {
+        grid-template-columns: 1fr;
+      }
+      .card-item-actions {
+        flex-direction: row;
+        justify-content: flex-end;
+      }
+      .metrics-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      body {
+        padding: 8px;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .metrics-grid {
+        grid-template-columns: 1fr;
+      }
+      .pill {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-logo">F</div>
+        <div class="brand-text">
+          <div class="brand-title">Flashcards SRS</div>
+          <div class="brand-subtitle">Repetição espaçada · MongoDB</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="pill" id="pillStatus">
+          <span>⚡</span>
+          <span class="text">Carregando...</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <aside class="sidebar">
+        <div>
+          <div class="sidebar-title">Baralhos</div>
+          <ul id="deckList" class="deck-list"></ul>
+          <div class="sidebar-actions">
+            <button class="btn btn-primary" id="btnNewDeck">＋ Novo baralho</button>
+            <button class="btn btn-ghost" id="btnRenameDeck">✏️ Renomear baralho</button>
+            <button class="btn btn-ghost" id="btnDeleteDeck">🗑 Excluir baralho</button>
+          </div>
+        </div>
+        <div class="sidebar-footer">
+          <div>🔥 Dados salvos na API (MongoDB).</div>
+          <div style="margin-top: 4px;">
+            Você pode abrir em outros dispositivos usando o mesmo appId.
+          </div>
+        </div>
+      </aside>
+
+      <section class="main-panel">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <div class="panel-title" id="panelTitle">Carregando baralhos...</div>
+            <div class="panel-subtitle" id="panelSubtitle">
+              Aguarde enquanto buscamos os dados na API.
+            </div>
+          </div>
+          <div class="tab-bar">
+            <button class="tab-btn active" data-tab="cards">
+              <span class="dot"></span>
+              Cartões
+            </button>
+            <button class="tab-btn" data-tab="study">Estudo</button>
+            <button class="tab-btn" data-tab="stats">Estatísticas</button>
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="content-main">
+            <!-- VIEW: CARDS -->
+            <div id="view-cards">
+              <div class="section-title-row">
+                <div class="section-title">Cartões do baralho</div>
+                <div class="section-helper">
+                  Adicione perguntas e respostas para este baralho.
+                </div>
+              </div>
+
+              <div class="card-list" id="cardList"></div>
+
+              <div class="inline-inputs">
+                <input type="text" id="inputFront" placeholder="Frente (pergunta)" />
+                <input type="text" id="inputBack" placeholder="Verso (resposta)" />
+                <button class="btn btn-primary" id="btnAddCard">＋ Adicionar</button>
+              </div>
+            </div>
+
+            <!-- VIEW: STUDY -->
+            <div id="view-study" class="hidden">
+              <div class="section-title-row">
+                <div class="section-title">Sessão de estudo</div>
+                <div class="section-helper" id="studyHelper">
+                  Selecione um baralho e clique em "Iniciar sessão".
+                </div>
+              </div>
+
+              <div class="study-wrapper" id="studyWrapper">
+                <!-- preenchido via JS -->
+              </div>
+            </div>
+
+            <!-- VIEW: STATS -->
+            <div id="view-stats" class="hidden">
+              <div class="section-title-row">
+                <div class="section-title">Estatísticas do baralho</div>
+                <div class="section-helper">
+                  Visão geral do volume de cards e progresso diário.
+                </div>
+              </div>
+              <div class="card-list" id="statsContainer"></div>
+            </div>
+          </div>
+
+          <!-- SIDE PANEL -->
+          <div class="content-side">
+            <div class="side-title">Resumo rápido</div>
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <div class="metric-label">Cards no baralho</div>
+                <div class="metric-value" id="metricTotalCards">0</div>
+                <div class="metric-chip">
+                  <span>📚</span>
+                  <span>Conteúdo total</span>
+                </div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Vencidos hoje</div>
+                <div class="metric-value" id="metricDueToday">0</div>
+                <div class="metric-chip warn">
+                  <span>⏰</span>
+                  <span>Para revisar</span>
+                </div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Estudados hoje</div>
+                <div class="metric-value" id="metricReviewedToday">0</div>
+                <div class="metric-chip ok">
+                  <span>✅</span>
+                  <span>Hoje</span>
+                </div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">% acerto geral</div>
+                <div class="metric-value" id="metricAccuracy">0%</div>
+                <div class="metric-chip">
+                  <span>📈</span>
+                  <span>Desempenho</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top: 8px; font-size: 11px;">
+              <strong>Legenda SRS</strong><br />
+              • <span style="color:#fecaca;">Difícil</span>: volta em pouco tempo.<br />
+              • <span style="color:#fef3c7;">Bom</span>: intervalo moderado.<br />
+              • <span style="color:#bbf7d0;">Fácil</span>: intervalo mais longo.
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // ===============================
+    // CONFIG / ESTADO
+    // ===============================
+    const APP_ID = "default-app-id"; // pode trocar por outro para separar "projetos"
+
+    let state = {
+      decks: []
+    };
+    let currentDeckId = null;
+    let currentTab = "cards";
+    let studyQueue = [];
+    let currentStudyCard = null;
+    let showingAnswer = false;
+    let isLoading = false;
+
+    // ===============================
+    // UTILS
+    // ===============================
+    function uid() {
+      return Math.random().toString(36).slice(2, 10);
+    }
+
+    function getCurrentDeck() {
+      return state.decks.find((d) => d._id === currentDeckId) || null;
+    }
+
+    function setLoading(loading, msg) {
+      isLoading = loading;
+      const pill = document.getElementById("pillStatus");
+      if (!pill) return;
+      const textEl = pill.querySelector(".text");
+      if (loading) {
+        pill.style.opacity = "1";
+        textEl.textContent = msg || "Sincronizando...";
+      } else {
+        pill.style.opacity = "0.85";
+        textEl.textContent = msg || "Online com a API";
+      }
+    }
+
+    async function apiFetch(path, options = {}) {
+      const res = await fetch(path, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {})
+        },
+        ...options
+      });
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "");
+        throw new Error(
+          `Erro HTTP ${res.status}: ${errText || res.statusText}`
+        );
+      }
+      const ct = res.headers.get("content-type") || "";
+      if (ct.includes("application/json")) {
+        return res.json();
+      }
+      return null;
+    }
+
+    // ===============================
+    // DOM REFS
+    // ===============================
+    const deckListEl = document.getElementById("deckList");
+    const panelTitleEl = document.getElementById("panelTitle");
+    const panelSubtitleEl = document.getElementById("panelSubtitle");
+    const cardListEl = document.getElementById("cardList");
+    const inputFrontEl = document.getElementById("inputFront");
+    const inputBackEl = document.getElementById("inputBack");
+    const viewCardsEl = document.getElementById("view-cards");
+    const viewStudyEl = document.getElementById("view-study");
+    const viewStatsEl = document.getElementById("view-stats");
+    const studyWrapperEl = document.getElementById("studyWrapper");
+    const studyHelperEl = document.getElementById("studyHelper");
+    const statsContainerEl = document.getElementById("statsContainer");
+
+    const metricTotalCardsEl = document.getElementById("metricTotalCards");
+    const metricDueTodayEl = document.getElementById("metricDueToday");
+    const metricReviewedTodayEl = document.getElementById("metricReviewedToday");
+    const metricAccuracyEl = document.getElementById("metricAccuracy");
+
+    // ===============================
+    // CARREGAR DECKS DA API
+    // ===============================
+    async function loadDecks() {
+      try {
+        setLoading(true, "Carregando baralhos...");
+        const data = await apiFetch(`/api/decks?appId=${encodeURIComponent(APP_ID)}`);
+        state.decks = Array.isArray(data) ? data : [];
+        if (!currentDeckId && state.decks.length) {
+          currentDeckId = state.decks[0]._id;
+        }
+        renderAll();
+      } catch (e) {
+        console.error(e);
+        alert("Erro ao carregar baralhos: " + e.message);
+        panelTitleEl.textContent = "Erro ao carregar dados";
+        panelSubtitleEl.textContent = "Verifique a API / MongoDB.";
+      } finally {
+        setLoading(false, "Online com a API");
+      }
+    }
+
+    async function saveDeck(deck, options = {}) {
+      const { silent } = options;
+      if (!deck || !deck._id) return;
+      try {
+        if (!silent) setLoading(true, "Salvando baralho...");
+        await apiFetch(`/api/decks/${deck._id}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            appId: APP_ID,
+            name: deck.name,
+            cards: deck.cards || []
+          })
+        });
+      } catch (e) {
+        console.error(e);
+        if (!silent) alert("Erro ao salvar baralho: " + e.message);
+      } finally {
+        if (!silent) setLoading(false, "Online com a API");
+      }
+    }
+
+    async function createDeck(name) {
+      try {
+        setLoading(true, "Criando baralho...");
+        const newDeck = await apiFetch("/api/decks", {
+          method: "POST",
+          body: JSON.stringify({
+            appId: APP_ID,
+            name: name,
+            cards: []
+          })
+        });
+        state.decks.push(newDeck);
+        currentDeckId = newDeck._id;
+        resetStudySession();
+        renderAll();
+      } catch (e) {
+        console.error(e);
+        alert("Erro ao criar baralho: " + e.message);
+      } finally {
+        setLoading(false, "Online com a API");
+      }
+    }
+
+    async function deleteDeckApi(deck) {
+      if (!deck || !deck._id) return;
+      try {
+        setLoading(true, "Removendo baralho...");
+        await apiFetch(
+          `/api/decks/${deck._id}?appId=${encodeURIComponent(APP_ID)}`,
+          { method: "DELETE" }
+        );
+        state.decks = state.decks.filter((d) => d._id !== deck._id);
+        currentDeckId = state.decks[0] ? state.decks[0]._id : null;
+        resetStudySession();
+        renderAll();
+      } catch (e) {
+        console.error(e);
+        alert("Erro ao excluir baralho: " + e.message);
+      } finally {
+        setLoading(false, "Online com a API");
+      }
+    }
+
+    // ===============================
+    // RENDERIZAÇÃO
+    // ===============================
+    function renderAll() {
+      renderDeckList();
+      renderMainPanelHeader();
+      renderMetrics();
+      renderTabContent();
+    }
+
+    function renderDeckList() {
+      deckListEl.innerHTML = "";
+
+      if (isLoading && state.decks.length === 0) {
+        const li = document.createElement("li");
+        li.className = "empty-state";
+        li.textContent = "Carregando baralhos...";
+        deckListEl.appendChild(li);
+        return;
+      }
+
+      if (!state.decks.length) {
+        const li = document.createElement("li");
+        li.className = "empty-state";
+        li.textContent = "Nenhum baralho. Crie um novo para começar.";
+        deckListEl.appendChild(li);
+        return;
+      }
+
+      state.decks.forEach((deck) => {
+        const li = document.createElement("li");
+        li.className =
+          "deck-item" + (deck._id === currentDeckId ? " active" : "");
+        li.dataset.id = deck._id;
+
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "name";
+        nameSpan.textContent = deck.name;
+
+        const countSpan = document.createElement("span");
+        countSpan.className = "count";
+        countSpan.textContent = deck.cards?.length || 0;
+
+        li.appendChild(nameSpan);
+        li.appendChild(countSpan);
+
+        li.addEventListener("click", () => {
+          currentDeckId = deck._id;
+          resetStudySession();
+          renderAll();
+        });
+
+        deckListEl.appendChild(li);
+      });
+    }
+
+    function renderMainPanelHeader() {
+      const deck = getCurrentDeck();
+      if (!deck) {
+        panelTitleEl.textContent = isLoading
+          ? "Carregando baralhos..."
+          : "Nenhum baralho selecionado";
+        panelSubtitleEl.textContent = isLoading
+          ? "Aguarde enquanto buscamos os dados na API."
+          : "Crie um baralho à esquerda para começar.";
+        return;
+      }
+
+      panelTitleEl.textContent = deck.name || "Baralho sem nome";
+
+      const totalCards = deck.cards?.length || 0;
+      const dueToday = countDueToday(deck);
+      panelSubtitleEl.textContent =
+        totalCards === 0
+          ? "Este baralho ainda não possui cartões."
+          : `Este baralho tem ${totalCards} cartão(ões) · ${dueToday} vencido(s) para hoje.`;
+    }
+
+    function renderMetrics() {
+      const deck = getCurrentDeck();
+      if (!deck) {
+        metricTotalCardsEl.textContent = "0";
+        metricDueTodayEl.textContent = "0";
+        metricReviewedTodayEl.textContent = "0";
+        metricAccuracyEl.textContent = "0%";
+        return;
+      }
+
+      const totalCards = deck.cards?.length || 0;
+      const dueToday = countDueToday(deck);
+      const { reviewedToday, accuracy } = computeStats(deck);
+
+      metricTotalCardsEl.textContent = String(totalCards);
+      metricDueTodayEl.textContent = String(dueToday);
+      metricReviewedTodayEl.textContent = String(reviewedToday);
+      metricAccuracyEl.textContent = isNaN(accuracy)
+        ? "0%"
+        : `${Math.round(accuracy)}%`;
+    }
+
+    function renderTabContent() {
+      const deck = getCurrentDeck();
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        const tab = btn.dataset.tab;
+        btn.classList.toggle("active", tab === currentTab);
+      });
+
+      viewCardsEl.classList.toggle("hidden", currentTab !== "cards");
+      viewStudyEl.classList.toggle("hidden", currentTab !== "study");
+      viewStatsEl.classList.toggle("hidden", currentTab !== "stats");
+
+      if (!deck) {
+        cardListEl.innerHTML =
+          '<div class="empty-state">Nenhum baralho selecionado.</div>';
+        studyWrapperEl.innerHTML =
+          '<div class="empty-state">Selecione ou crie um baralho para estudar.</div>';
+        studyHelperEl.textContent =
+          "Selecione um baralho para liberar a sessão.";
+        statsContainerEl.innerHTML =
+          '<div class="empty-state">Selecione um baralho para ver estatísticas.</div>';
+        return;
+      }
+
+      if (currentTab === "cards") renderCardsView(deck);
+      if (currentTab === "study") renderStudyView(deck);
+      if (currentTab === "stats") renderStatsView(deck);
+    }
+
+    // ===============================
+    // VIEW: CARDS
+    // ===============================
+    function renderCardsView(deck) {
+      const cards = deck.cards || [];
+      if (!cards.length) {
+        cardListEl.innerHTML =
+          '<div class="empty-state">Nenhum cartão neste baralho ainda. Adicione um abaixo.</div>';
+        return;
+      }
+
+      cardListEl.innerHTML = "";
+
+      cards.forEach((card) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "card-item";
+
+        const frontDiv = document.createElement("div");
+        frontDiv.className = "card-item-front";
+        frontDiv.textContent = card.front;
+
+        const backDiv = document.createElement("div");
+        backDiv.className = "card-item-back";
+        backDiv.textContent = card.back;
+
+        const actionsDiv = document.createElement("div");
+        actionsDiv.className = "card-item-actions";
+
+        const isNew = !card.srs || (card.stats?.reviews || 0) === 0;
+        const badge = document.createElement("div");
+        badge.className = "badge" + (isNew ? " badge-new" : "");
+        badge.textContent = isNew ? "Novo" : "Repetição";
+
+        const editBtn = document.createElement("button");
+        editBtn.className = "btn btn-sm";
+        editBtn.textContent = "Editar";
+
+        const delBtn = document.createElement("button");
+        delBtn.className = "btn btn-sm";
+        delBtn.textContent = "Excluir";
+
+        editBtn.addEventListener("click", async () => {
+          const frontNew = prompt("Edite a frente (pergunta):", card.front);
+          if (frontNew === null) return;
+          const backNew = prompt("Edite o verso (resposta):", card.back);
+          if (backNew === null) return;
+          card.front = String(frontNew).trim();
+          card.back = String(backNew).trim();
+          await saveDeck(deck);
+          renderAll();
+        });
+
+        delBtn.addEventListener("click", async () => {
+          if (!confirm("Excluir este cartão?")) return;
+          deck.cards = (deck.cards || []).filter((c) => c.id !== card.id);
+          await saveDeck(deck);
+          resetStudySession();
+          renderAll();
+        });
+
+        actionsDiv.appendChild(badge);
+        actionsDiv.appendChild(editBtn);
+        actionsDiv.appendChild(delBtn);
+
+        wrapper.appendChild(frontDiv);
+        wrapper.appendChild(backDiv);
+        wrapper.appendChild(actionsDiv);
+
+        cardListEl.appendChild(wrapper);
+      });
+    }
+
+    document.getElementById("btnAddCard").addEventListener("click", async () => {
+      const deck = getCurrentDeck();
+      if (!deck) {
+        alert("Crie um baralho primeiro.");
+        return;
+      }
+      const front = inputFrontEl.value.trim();
+      const back = inputBackEl.value.trim();
+      if (!front || !back) {
+        alert("Preencha frente e verso do cartão.");
+        return;
+      }
+      if (!Array.isArray(deck.cards)) deck.cards = [];
+      const card = {
+        id: uid(),
+        front,
+        back,
+        createdAt: Date.now(),
+        srs: null,
+        stats: {
+          reviews: 0,
+          correct: 0,
+          wrong: 0,
+          lastReviewAt: null
+        }
+      };
+      deck.cards.push(card);
+      inputFrontEl.value = "";
+      inputBackEl.value = "";
+      await saveDeck(deck);
+      resetStudySession();
+      renderAll();
+    });
+
+    // ===============================
+    // VIEW: ESTUDO (SRS)
+    // ===============================
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        currentTab = btn.dataset.tab;
+        renderTabContent();
+      });
+    });
+
+    function resetStudySession() {
+      studyQueue = [];
+      currentStudyCard = null;
+      showingAnswer = false;
+    }
+
+    function buildStudyQueue(deck) {
+      const now = Date.now();
+      const DAY = 24 * 60 * 60 * 1000;
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = todayStart.getTime() + DAY - 1;
+
+      const due = [];
+      const newCards = [];
+
+      (deck.cards || []).forEach((card) => {
+        if (!card.srs || (card.stats?.reviews || 0) === 0) {
+          newCards.push(card);
+        } else if (card.srs.dueAt <= todayEnd) {
+          due.push(card);
+        }
+      });
+
+      shuffleArray(due);
+      shuffleArray(newCards);
+
+      studyQueue = [...due, ...newCards];
+    }
+
+    function renderStudyView(deck) {
+      const cards = deck.cards || [];
+      if (!cards.length) {
+        studyWrapperEl.innerHTML =
+          '<div class="empty-state">Este baralho ainda não tem cards. Crie alguns para começar a revisão.</div>';
+        studyHelperEl.textContent = "Adicione cards no painel de Cartões.";
+        return;
+      }
+
+      if (!studyQueue.length && !currentStudyCard) {
+        studyWrapperEl.innerHTML = "";
+        const btn = document.createElement("button");
+        btn.className = "btn btn-primary";
+        btn.textContent = "▶ Iniciar sessão de hoje";
+        btn.addEventListener("click", () => {
+          buildStudyQueue(deck);
+          nextStudyCard();
+        });
+
+        const helper = document.createElement("div");
+        helper.className = "empty-state";
+        helper.innerHTML =
+          "Clique no botão abaixo para montar a fila de revisão baseada no algoritmo de repetição espaçada.";
+
+        studyWrapperEl.appendChild(helper);
+        studyWrapperEl.appendChild(btn);
+
+        studyHelperEl.textContent =
+          "A sessão considera cards vencidos e depois inclui cards novos.";
+        return;
+      }
+
+      if (!currentStudyCard) {
+        studyWrapperEl.innerHTML =
+          '<div class="empty-state">Sem mais cards na fila por agora. 🎉<br />Você já revisou tudo o que estava vencido.</div>';
+        studyHelperEl.textContent =
+          "Você pode voltar mais tarde ou adicionar novos cards.";
+        return;
+      }
+
+      studyWrapperEl.innerHTML = "";
+
+      const card = currentStudyCard;
+      const isNew = !card.srs || (card.stats?.reviews || 0) === 0;
+
+      const studyCard = document.createElement("div");
+      studyCard.className = "study-card";
+
+      const label = document.createElement("div");
+      label.className = "study-card-label";
+      label.textContent = showingAnswer
+        ? "Resposta"
+        : isNew
+        ? "Novo card"
+        : "Revisão";
+
+      const content = document.createElement("div");
+      content.className = "study-card-content";
+      content.textContent = showingAnswer ? card.back : card.front;
+
+      const sub = document.createElement("div");
+      sub.className = "study-card-sub";
+      if (!isNew && card.srs) {
+        const days = Math.round(card.srs.intervalDays || 0);
+        sub.textContent = showingAnswer
+          ? `Intervalo atual: ${days} dia(s) · Facilidade: ${card.srs.ease.toFixed(
+              2
+            )}`
+          : "Pense na resposta antes de virar o card.";
+      } else {
+        sub.textContent = showingAnswer
+          ? "Primeira vez estudando este card."
+          : "Leia a pergunta e tente lembrar da resposta.";
+      }
+
+      studyCard.appendChild(label);
+      studyCard.appendChild(content);
+      studyCard.appendChild(sub);
+
+      const footer = document.createElement("div");
+      footer.className = "study-footer";
+
+      const primaryActions = document.createElement("div");
+      primaryActions.className = "study-actions-primary";
+
+      if (!showingAnswer) {
+        const showBtn = document.createElement("button");
+        showBtn.className = "btn btn-primary";
+        showBtn.textContent = "Mostrar resposta";
+        showBtn.addEventListener("click", () => {
+          showingAnswer = true;
+          renderTabContent();
+        });
+        primaryActions.appendChild(showBtn);
+      } else {
+        const diffBtn = document.createElement("button");
+        diffBtn.className = "btn btn-diff diff";
+        diffBtn.textContent = "Difícil";
+        diffBtn.addEventListener("click", () =>
+          handleReviewQuality(card, "hard")
+        );
+
+        const goodBtn = document.createElement("button");
+        goodBtn.className = "btn btn-diff good";
+        goodBtn.textContent = "Bom";
+        goodBtn.addEventListener("click", () =>
+          handleReviewQuality(card, "good")
+        );
+
+        const easyBtn = document.createElement("button");
+        easyBtn.className = "btn btn-diff easy";
+        easyBtn.textContent = "Fácil";
+        easyBtn.addEventListener("click", () =>
+          handleReviewQuality(card, "easy")
+        );
+
+        primaryActions.appendChild(diffBtn);
+        primaryActions.appendChild(goodBtn);
+        primaryActions.appendChild(easyBtn);
+      }
+
+      const meta = document.createElement("div");
+      meta.className = "study-meta";
+      const indexPos = studyQueue.length + (currentStudyCard ? 1 : 0);
+      meta.textContent = `${indexPos} card(s) restantes na fila.`;
+
+      footer.appendChild(primaryActions);
+      footer.appendChild(meta);
+
+      studyWrapperEl.appendChild(studyCard);
+      studyWrapperEl.appendChild(footer);
+
+      studyHelperEl.textContent =
+        "Classifique a dificuldade para o algoritmo agendar a próxima revisão.";
+    }
+
+    async function nextStudyCard() {
+      if (studyQueue.length === 0) {
+        currentStudyCard = null;
+        showingAnswer = false;
+        renderTabContent();
+        renderMetrics();
+        return;
+      }
+      currentStudyCard = studyQueue.shift();
+      showingAnswer = false;
+      renderTabContent();
+      renderMetrics();
+    }
+
+    async function handleReviewQuality(card, quality) {
+      const deck = getCurrentDeck();
+      if (!deck) return;
+      applySRS(card, quality);
+      await saveDeck(deck, { silent: true });
+      await nextStudyCard();
+    }
+
+    // ===============================
+    // ALGORITMO SRS (SM-2 SIMPLIFICADO)
+    // ===============================
+    function applySRS(card, quality) {
+      const now = Date.now();
+      const DAY = 24 * 60 * 60 * 1000;
+
+      if (!card.srs) {
+        card.srs = {
+          ease: 2.5,
+          intervalDays: 0,
+          dueAt: now
+        };
+      }
+
+      if (!card.stats) {
+        card.stats = {
+          reviews: 0,
+          correct: 0,
+          wrong: 0,
+          lastReviewAt: null
+        };
+      }
+
+      card.stats.reviews += 1;
+      if (quality === "hard") {
+        card.stats.wrong = (card.stats.wrong || 0) + 1;
+      } else {
+        card.stats.correct = (card.stats.correct || 0) + 1;
+      }
+      card.stats.lastReviewAt = now;
+
+      let q;
+      if (quality === "hard") q = 2;
+      else if (quality === "good") q = 4;
+      else q = 5;
+
+      let EF = card.srs.ease;
+      EF = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02));
+      if (EF < 1.3) EF = 1.3;
+
+      card.srs.ease = EF;
+
+      let interval;
+      if (card.stats.reviews === 1) {
+        interval = 1;
+      } else if (card.stats.reviews === 2) {
+        interval = quality === "hard" ? 1 : 6;
+      } else {
+        const prevInterval = card.srs.intervalDays || 1;
+        if (quality === "hard") {
+          interval = Math.max(1, Math.round(prevInterval * 0.5));
+        } else {
+          interval = Math.round(prevInterval * EF);
+        }
+      }
+
+      if (quality === "hard") {
+        interval = Math.max(0.5, interval * 0.5);
+      }
+
+      card.srs.intervalDays = interval;
+      card.srs.dueAt = now + interval * DAY;
+    }
+
+    // ===============================
+    // VIEW: ESTATÍSTICAS
+    // ===============================
+    function computeStats(deck) {
+      const DAY = 24 * 60 * 60 * 1000;
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = todayStart.getTime() + DAY - 1;
+
+      let reviewedToday = 0;
+      let totalCorrect = 0;
+      let totalReviews = 0;
+
+      (deck.cards || []).forEach((card) => {
+        if (card.stats) {
+          totalCorrect += card.stats.correct || 0;
+          totalReviews += card.stats.reviews || 0;
+          if (
+            card.stats.lastReviewAt &&
+            card.stats.lastReviewAt >= todayStart.getTime() &&
+            card.stats.lastReviewAt <= todayEnd
+          ) {
+            reviewedToday += 1;
+          }
+        }
+      });
+
+      const accuracy =
+        totalReviews === 0 ? NaN : (totalCorrect / totalReviews) * 100;
+
+      return { reviewedToday, accuracy };
+    }
+
+    function countDueToday(deck) {
+      const DAY = 24 * 60 * 60 * 1000;
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = todayStart.getTime() + DAY - 1;
+
+      let due = 0;
+      (deck.cards || []).forEach((card) => {
+        if (!card.srs || (card.stats?.reviews || 0) === 0) return;
+        if (card.srs.dueAt <= todayEnd) due += 1;
+      });
+      return due;
+    }
+
+    function renderStatsView(deck) {
+      const totalCards = deck.cards?.length || 0;
+      const dueToday = countDueToday(deck);
+      const { reviewedToday, accuracy } = computeStats(deck);
+      const totalReviews = (deck.cards || []).reduce(
+        (acc, c) => acc + (c.stats ? c.stats.reviews || 0 : 0),
+        0
+      );
+
+      const body = document.createElement("div");
+      body.style.fontSize = "13px";
+      body.style.display = "flex";
+      body.style.flexDirection = "column";
+      body.style.gap = "8px";
+
+      body.innerHTML = `
+        <div><strong>Resumo geral</strong></div>
+        <div>• ${totalCards} card(s) no baralho.</div>
+        <div>• ${dueToday} card(s) vencidos para hoje.</div>
+        <div>• ${reviewedToday} card(s) estudados hoje.</div>
+        <div>• ${totalReviews} revisão(ões) acumuladas.</div>
+        <div>• Taxa de acerto aproximada: <strong>${
+          isNaN(accuracy) ? "0%" : `${Math.round(accuracy)}%`
+        }</strong>.</div>
+        <hr style="border-color: rgba(148,163,184,0.35); margin: 8px 0;" />
+        <div style="font-size: 12px; color: var(--muted);">
+          A lógica de repetição espaçada é inspirada no algoritmo SM-2:
+          quanto mais fácil você classifica um card, maior fica o intervalo
+          até a próxima revisão. Se marcar como "Difícil", ele volta mais cedo.
+        </div>
+      `;
+
+      statsContainerEl.innerHTML = "";
+      statsContainerEl.appendChild(body);
+    }
+
+    // ===============================
+    // UTILS
+    // ===============================
+    function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+    }
+
+    // ===============================
+    // AÇÕES SIDEBAR
+    // ===============================
+    document.getElementById("btnNewDeck").addEventListener("click", async () => {
+      const name = prompt("Nome do novo baralho:");
+      if (!name || !String(name).trim()) return;
+      await createDeck(String(name).trim());
+    });
+
+    document.getElementById("btnRenameDeck").addEventListener("click", async () => {
+      const deck = getCurrentDeck();
+      if (!deck) {
+        alert("Nenhum baralho selecionado.");
+        return;
+      }
+      const name = prompt("Novo nome para o baralho:", deck.name || "");
+      if (!name || !String(name).trim()) return;
+      deck.name = String(name).trim();
+      await saveDeck(deck);
+      renderAll();
+    });
+
+    document.getElementById("btnDeleteDeck").addEventListener("click", async () => {
+      const deck = getCurrentDeck();
+      if (!deck) {
+        alert("Nenhum baralho selecionado.");
+        return;
+      }
+      if (
+        !confirm(
+          `Excluir o baralho "${deck.name}" e todos os cartões dele? Esta ação não pode ser desfeita.`
+        )
+      )
+        return;
+      await deleteDeckApi(deck);
+    });
+
+    // ===============================
+    // INIT
+    // ===============================
+    window.addEventListener("DOMContentLoaded", () => {
+      renderAll(); // mostra estados iniciais
+      loadDecks();
+    });
+  </script>
+</body>
+</html>
